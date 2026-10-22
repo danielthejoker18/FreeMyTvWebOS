@@ -1540,16 +1540,20 @@
 
                 const poster = document.createElement('div');
                 poster.className = 'pick-poster';
-                if (pick.poster) {
+                // Poster URLs come from third-party APIs, so only plain https URLs may enter the CSS url().
+                if (pick.poster && /^https:\/\/[^\s"'()\\]+$/.test(pick.poster)) {
                     poster.style.backgroundImage = "url('" + pick.poster + "')";
                 }
 
+                // Pick text comes from TMDB/TVMaze (TVMaze is community-edited), so it is set as text, never HTML.
                 const meta = document.createElement('div');
                 meta.className = 'pick-meta';
-                meta.innerHTML =
-                    '<div class="pick-badge">' + pick.badge + '</div>' +
-                    '<div class="pick-title">' + pick.title + '</div>' +
-                    '<div class="pick-service">' + pick.service + '</div>';
+                [['pick-badge', pick.badge], ['pick-title', pick.title], ['pick-service', pick.service]].forEach(function(part) {
+                    const el = document.createElement('div');
+                    el.className = part[0];
+                    el.textContent = part[1];
+                    meta.appendChild(el);
+                });
 
                 card.appendChild(poster);
                 card.appendChild(meta);
@@ -1740,7 +1744,13 @@
                 const isSelected = tempFavorites.indexOf(app.id) !== -1;
                 const item = document.createElement('div');
                 item.className = 'app-toggle-item modal-nav' + (isSelected ? ' selected' : '');
-                item.innerHTML = '<span>' + app.title + '</span><span>' + (isSelected ? '✓' : '+') + '</span>';
+                // Installed app titles come from listLaunchPoints, so they are set as text.
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = app.title;
+                const markSpan = document.createElement('span');
+                markSpan.textContent = isSelected ? '✓' : '+';
+                item.appendChild(titleSpan);
+                item.appendChild(markSpan);
 
                 item.addEventListener('click', function() {
                     const idx = tempFavorites.indexOf(app.id);

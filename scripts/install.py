@@ -75,8 +75,10 @@ def install_app(tv_ip, passphrase=None):
         try:
             with urllib.request.urlopen(f"http://{tv_ip}:9991/webos_rsa", timeout=5) as resp:
                 key_data = resp.read()
-                with open(raw_key, "wb") as f:
+                fd = os.open(raw_key, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, "wb") as f:
                     f.write(key_data)
+                os.chmod(raw_key, 0o600)
         except Exception as e:
             print(f"[!] Failed to fetch key: {e}")
             print("[!] Make sure 'Key Server' is toggled ON in the Developer Mode app on the TV.")
@@ -90,8 +92,12 @@ def install_app(tv_ip, passphrase=None):
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption()
         )
-        with open(dec_key, "wb") as f:
+        # Private keys must be owner-only: other local users could otherwise read
+        # them, and OpenSSH refuses to use a key with group/other permissions.
+        fd = os.open(dec_key, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "wb") as f:
             f.write(unenc)
+        os.chmod(dec_key, 0o600)
         print("[+] SSH Key saved & decrypted successfully.")
 
     print(f"[*] Uploading Free My TV to TV ({tv_ip})...")
