@@ -132,10 +132,21 @@ def install_app(tv_ip, passphrase=None):
             res = subprocess.run(["ssh", *ssh_opts, "-p", "9922", "-i", dec_key, f"prisoner@{tv_ip}", remote_cmd], capture_output=True, text=True)
         return res
 
+    def run_luna_timed(seconds, inner_cmd):
+        # BusyBox's timeout only learned the coreutils "timeout DURATION CMD" spelling
+        # in 1.30; before that it wanted "-t SECS", and older webOS builds ship the
+        # older applet, which tries to execute the duration as a program instead.
+        # Try the modern form first, then fall back on that complaint.
+        res = run_luna(f"timeout {seconds} {inner_cmd}")
+        blob = (res.stdout or "") + (res.stderr or "")
+        if "can't execute" in blob or "Unknown option" in blob or "invalid option" in blob:
+            print("[*] TV's timeout wants the older -t form; retrying...")
+            res = run_luna(f"timeout -t {seconds} {inner_cmd}")
+        return res
+
     print("[*] Installing package on TV...")
     install_payload = json.dumps({"id": APP_ID, "ipkUrl": "/media/developer/temp/app.ipk", "subscribe": True})
-    install_remote_cmd = f"timeout 45 luna-send-pub -n 30 luna://com.webos.appInstallService/dev/install '{install_payload}'"
-    install_res = run_luna(install_remote_cmd)
+    install_res = run_luna_timed(45, f"luna-send-pub -n 30 luna://com.webos.appInstallService/dev/install '{install_payload}'")
     install_out = install_res.stdout
     if '"state":"installed"' not in install_out:
         print("[!] Install did not reach the 'installed' state. Raw output:")
