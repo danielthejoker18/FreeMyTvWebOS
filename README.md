@@ -86,7 +86,7 @@ python scripts/install.py
 ### Step 2B: GUI Install via webOS Dev Manager
 1. Install [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases) (`winget install webosbrew.webOSDevManager` on Windows).
 2. Connect your TV using the IP and Passphrase.
-3. Download [`dist/org.webos.freemytv_1.2.4_all.ipk`](dist/org.webos.freemytv_1.2.4_all.ipk) and click **Install .ipk**.
+3. Download [`dist/org.webos.freemytv_1.2.5_all.ipk`](dist/org.webos.freemytv_1.2.5_all.ipk) and click **Install .ipk**.
 
 > [!TIP]
 > **Make It Your 1-Second Home Key (Quick Access):**
@@ -113,6 +113,8 @@ Some newer webOS releases block Developer Mode apps from listing installed apps.
 | **App Shelf Selector** | Auto-discovers apps installed on your TV (`listLaunchPoints`) so you can pick up to 8 favorites for your glass dock. |
 | **City Name** | Type any city (e.g., `São Paulo`, `Lisbon`, `New York`) for live Open-Meteo weather and accurate local sunset times, or leave blank for automatic IP geolocation. |
 | **Theme Mode** | Choose `Auto (Follows Sunset)`, `Deep Midnight`, `Pure OLED Black`, or `Daylight Blue`. |
+| **Clock Format** | Toggle between `24-Hour (20:30)` and `12-Hour (8:30 PM)` display. |
+| **Performance Mode** | Choose between `Standard (Glass & Glow)` and `High Performance (60 FPS Boost)` to disable heavy backdrop filters on resource-constrained TVs. |
 | **TMDB API Key** | Paste a free [TMDB API Key](https://www.themoviedb.org/settings/api) for live weekly trending movies & shows, or leave empty to use the built-in zero-key live popular feed. |
 
 ---
@@ -140,7 +142,7 @@ free-my-webos/
 │   ├── webOSTV.js         # Official LG webOS JavaScript service library
 │   └── assets/            # App icons & splash screens
 ├── dist/
-│   └── org.webos.freemytv_1.2.4_all.ipk
+│   └── org.webos.freemytv_1.2.5_all.ipk
 ├── docs/                  # Live preview & visual assets
 └── scripts/
     ├── build.py           # Cross-platform .ipk compiler (ares-package + pure Python fallback)
@@ -251,7 +253,7 @@ python scripts/install.py
 ### Passo 2B: Instalação via Interface Gráfica (webOS Dev Manager)
 1. Instale o [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases) (`winget install webosbrew.webOSDevManager` no Windows).
 2. Conecte sua TV usando o IP e a Senha.
-3. Baixe o [`dist/org.webos.freemytv_1.2.4_all.ipk`](dist/org.webos.freemytv_1.2.4_all.ipk) e clique em **Install .ipk**.
+3. Baixe o [`dist/org.webos.freemytv_1.2.5_all.ipk`](dist/org.webos.freemytv_1.2.5_all.ipk) e clique em **Install .ipk**.
 
 > [!TIP]
 > **Transforme em Sua Tecla de Acesso Rápido (1 Segundo):**
@@ -268,6 +270,8 @@ Clique no botão **⚙️ Customize** no canto superior direito do painel usando
 | **Seletor de Prateleira de Apps** | Descobre automaticamente os apps instalados na sua TV (`listLaunchPoints`) para você escolher até 8 favoritos para sua prateleira de vidro. |
 | **Nome da Cidade** | Digite qualquer cidade (ex.: `São Paulo`, `Lisboa`, `Nova York`) para clima ao vivo via Open-Meteo e horários precisos de pôr do sol, ou deixe em branco para geolocalização automática por IP. |
 | **Modo de Tema** | Escolha entre `Automático (Segue o Pôr do Sol)`, `Meia-Noite Profunda`, `Preto OLED Puro`, ou `Azul Diurno`. |
+| **Formato do Relógio** | Alterne entre exibição em `24 Horas (20:30)` ou `12 Horas (8:30 PM)`. |
+| **Modo de Performance** | Escolha entre `Padrão (Vidro & Brilho)` ou `Alta Performance (60 FPS Boost)` para desativar filtros pesados de desfoque em TVs mais modestas. |
 | **Chave da API do TMDB** | Cole uma [chave gratuita da API do TMDB](https://www.themoviedb.org/settings/api) para ver filmes e séries em alta da semana ao vivo, ou deixe em branco para usar o feed ao vivo popular embutido (sem necessidade de chave). |
 
 ---
@@ -295,7 +299,7 @@ free-my-webos/
 │   ├── webOSTV.js         # Biblioteca oficial de serviços JavaScript do LG webOS
 │   └── assets/            # Ícones e telas de splash do app
 ├── dist/
-│   └── org.webos.freemytv_1.2.4_all.ipk
+│   └── org.webos.freemytv_1.2.5_all.ipk
 ├── docs/                  # Preview ao vivo e recursos visuais
 └── scripts/
     ├── build.py           # Compilador .ipk multiplataforma (ares-package + fallback em Python puro)

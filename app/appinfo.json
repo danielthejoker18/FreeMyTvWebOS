@@ -1,6 +1,6 @@
 {
   "id": "org.webos.freemytv",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "vendor": "FreeMyTV",
   "type": "web",
   "main": "index.html",
@@ -8,6 +8,7 @@
   "icon": "assets/icon.png",
   "largeIcon": "assets/largeIcon.png",
   "splashBackground": "assets/splash.png",
+  "bgColor": "#000000",
   "iconColor": "#0a84ff",
   "resolution": "1920x1080",
   "handlesRelaunch": false,
