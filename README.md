@@ -106,6 +106,8 @@ Under **HDMI Devices**, press a port to cycle through HDMI, PS5, PS4, Xbox, Nint
 
 The shelf displays larger artwork with bundled brand logos for PS5, PS4, Xbox, Nintendo Switch, and the streaming apps in the default catalog (including Netflix). These logos work offline. Other installed apps use icons supplied by webOS when accessible; missing or unreadable icons fall back to a readable app name.
 
+Some newer webOS releases block Developer Mode apps from listing installed apps. On those TVs, a one-time on-screen prompt asks to allow Free My TV; accept it so your installed apps appear in Customize.
+
 | Setting | What It Does |
 |---|---|
 | **App Shelf Selector** | Auto-discovers apps installed on your TV (`listLaunchPoints`) so you can pick up to 8 favorites for your glass dock. |

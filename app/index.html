@@ -1460,6 +1460,30 @@
         }
 
         // --- Discover Installed Apps from LG webOS ---
+        function addLaunchPoints(launchPoints) {
+            launchPoints.forEach(function(lp) {
+                var appId = lp.appId || lp.id;
+                if (!appId) return;
+                var exists = arrFind(state.catalog, function(c) { return c.id === appId; });
+                var iconUrl = launchPointIcon(lp);
+                if (exists && iconUrl) exists.iconUrl = iconUrl;
+                if (lp.systemApp && !exists) return;
+                if (!exists) {
+                    state.catalog.push({
+                        id: appId,
+                        title: lp.title || lp.id,
+                        tag: 'Installed App',
+                        desc: lp.appDescription || ('Launch ' + (lp.title || lp.id) + ' natively on your LG TV.'),
+                        color: lp.iconColor || '#0a84ff',
+                        badge: (lp.title || 'APP').substring(0, 3).toUpperCase(),
+                        iconUrl: iconUrl,
+                        bg: 'linear-gradient(135deg, ' + (lp.iconColor || '#2a344a') + ', #101420)'
+                    });
+                }
+            });
+            renderAppsShelf();
+        }
+
         function discoverTVApps() {
             if (!window.webOS || !window.webOS.service) return;
             try {
@@ -1467,32 +1491,47 @@
                     method: "listLaunchPoints",
                     parameters: {},
                     onSuccess: function(res) {
-                        if (res && Array.isArray(res.launchPoints)) {
-                            res.launchPoints.forEach(function(lp) {
-                                var appId = lp.appId || lp.id;
-                                if (!appId) return;
-                                var exists = arrFind(state.catalog, function(c) { return c.id === appId; });
-                                var iconUrl = launchPointIcon(lp);
-                                if (exists && iconUrl) exists.iconUrl = iconUrl;
-                                if (lp.systemApp && !exists) return;
-                                if (!exists) {
-                                    state.catalog.push({
-                                        id: appId,
-                                        title: lp.title || lp.id,
-                                        tag: 'Installed App',
-                                        desc: lp.appDescription || ('Launch ' + (lp.title || lp.id) + ' natively on your LG TV.'),
-                                        color: lp.iconColor || '#0a84ff',
-                                        badge: (lp.title || 'APP').substring(0, 3).toUpperCase(),
-                                        iconUrl: iconUrl,
-                                        bg: 'linear-gradient(135deg, ' + (lp.iconColor || '#2a344a') + ', #101420)'
-                                    });
-                                }
-                            });
-                            renderAppsShelf();
-                        }
-                    }
+                        if (res && Array.isArray(res.launchPoints)) addLaunchPoints(res.launchPoints);
+                    },
+                    // Newer webOS (seen on SDK 10.x) denies listLaunchPoints to Dev Mode apps.
+                    onFailure: discoverViaSSAP
                 });
             } catch (e) {}
+        }
+
+        // The TV's own remote-control socket still lists installed apps once the
+        // viewer accepts a one-time on-screen pairing prompt. The client key it
+        // returns is kept so later launches skip the prompt.
+        function discoverViaSSAP() {
+            var ws;
+            try { ws = new WebSocket('ws://127.0.0.1:3000'); } catch (e) { return; }
+            var clientKey = null;
+            try { clientKey = localStorage.getItem('fmtv_ssap_key'); } catch (e) {}
+            ws.onopen = function() {
+                var payload = {
+                    pairingType: 'PROMPT',
+                    manifest: { manifestVersion: 1, appVersion: '1.0', permissions: ['READ_INSTALLED_APPS'] }
+                };
+                if (clientKey) payload['client-key'] = clientKey;
+                ws.send(JSON.stringify({ id: 'register', type: 'register', payload: payload }));
+            };
+            ws.onmessage = function(ev) {
+                var msg;
+                try { msg = JSON.parse(ev.data); } catch (e) { return; }
+                if (msg.id === 'register') {
+                    if (msg.type === 'response' && msg.payload && msg.payload.pairingType === 'PROMPT') {
+                        showToast('Accept the request on screen so Free My TV can list your installed apps.', 15000);
+                    } else if (msg.type === 'registered') {
+                        try { localStorage.setItem('fmtv_ssap_key', msg.payload['client-key']); } catch (e) {}
+                        ws.send(JSON.stringify({ id: 'apps', type: 'request', uri: 'ssap://com.webos.applicationManager/listLaunchPoints' }));
+                    } else if (msg.type === 'error') {
+                        ws.close();
+                    }
+                } else if (msg.id === 'apps') {
+                    if (msg.payload && Array.isArray(msg.payload.launchPoints)) addLaunchPoints(msg.payload.launchPoints);
+                    ws.close();
+                }
+            };
         }
 
         // --- Native webOS App Launch ---
