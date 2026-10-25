@@ -1494,19 +1494,39 @@
                         if (res && Array.isArray(res.launchPoints)) addLaunchPoints(res.launchPoints);
                     },
                     // Newer webOS (seen on SDK 10.x) denies listLaunchPoints to Dev Mode apps.
-                    onFailure: discoverViaSSAP
+                    onFailure: function() { discoverViaSSAP(0); }
                 });
             } catch (e) {}
         }
 
         // The TV's own remote-control socket still lists installed apps once the
         // viewer accepts a one-time on-screen pairing prompt. The client key it
-        // returns is kept so later launches skip the prompt.
-        function discoverViaSSAP() {
-            var ws;
-            try { ws = new WebSocket('ws://127.0.0.1:3000'); } catch (e) { return; }
+        // returns is kept so later launches skip the prompt. Right after an app
+        // (re)launch the socket sometimes drops or ignores the connection, so a failed
+        // attempt is retried; a shown prompt or a refusal is never retried.
+        var SSAP_RETRY_MS = [2000, 5000, 15000];
+        function discoverViaSSAP(attempt) {
+            attempt = attempt || 0;
+            var ws, timer;
+            var settled = false;
+            var prompted = false;
+            function finish(retry) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                try { ws.close(); } catch (e) {}
+                if (retry && attempt < SSAP_RETRY_MS.length) {
+                    setTimeout(function() { discoverViaSSAP(attempt + 1); }, SSAP_RETRY_MS[attempt]);
+                }
+            }
+            function waitForReply() {
+                clearTimeout(timer);
+                timer = setTimeout(function() { finish(true); }, 8000);
+            }
+            try { ws = new WebSocket('ws://127.0.0.1:3000'); } catch (e) { finish(true); return; }
             var clientKey = null;
             try { clientKey = localStorage.getItem('fmtv_ssap_key'); } catch (e) {}
+            waitForReply();
             ws.onopen = function() {
                 var payload = {
                     pairingType: 'PROMPT',
@@ -1515,21 +1535,27 @@
                 if (clientKey) payload['client-key'] = clientKey;
                 ws.send(JSON.stringify({ id: 'register', type: 'register', payload: payload }));
             };
+            // Also fires after a connection error.
+            ws.onclose = function() { finish(!prompted); };
             ws.onmessage = function(ev) {
                 var msg;
                 try { msg = JSON.parse(ev.data); } catch (e) { return; }
                 if (msg.id === 'register') {
                     if (msg.type === 'response' && msg.payload && msg.payload.pairingType === 'PROMPT') {
+                        // Waiting for the viewer: no timeout, and no retry that would prompt again.
+                        prompted = true;
+                        clearTimeout(timer);
                         showToast('Accept the request on screen so Free My TV can list your installed apps.', 15000);
                     } else if (msg.type === 'registered') {
                         try { localStorage.setItem('fmtv_ssap_key', msg.payload['client-key']); } catch (e) {}
                         ws.send(JSON.stringify({ id: 'apps', type: 'request', uri: 'ssap://com.webos.applicationManager/listLaunchPoints' }));
+                        waitForReply();
                     } else if (msg.type === 'error') {
-                        ws.close();
+                        finish(false);
                     }
                 } else if (msg.id === 'apps') {
                     if (msg.payload && Array.isArray(msg.payload.launchPoints)) addLaunchPoints(msg.payload.launchPoints);
-                    ws.close();
+                    finish(false);
                 }
             };
         }
