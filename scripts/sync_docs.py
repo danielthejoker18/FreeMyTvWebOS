@@ -20,6 +20,7 @@ DOCS = os.path.join(REPO_DIR, "docs")
 def mirrored_files():
     """Yield (src, dst) pairs that docs/ must mirror from app/."""
     yield os.path.join(APP, "index.html"), os.path.join(DOCS, "index.html")
+    yield os.path.join(APP, "custom-dock.js"), os.path.join(DOCS, "custom-dock.js")
     # User-supplied artwork is optional; when present it must be mirrored into
     # docs/ so the GitHub Pages preview can display exactly the packaged image.
     for name in ("background.jpg", "background-2.jpg", "background-3.jpg"):
