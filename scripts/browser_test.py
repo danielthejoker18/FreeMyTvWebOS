@@ -34,7 +34,7 @@ EXPECTED = {  # language -> (element id, expected text)
 # Runs inside the page after boot and reports into <pre id="__result">.
 PROBE = r"""
 setTimeout(function () {
-  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false, menuRows: {}, background: {} };
+  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false, menuRows: {}, background: {}, dock: {} };
   var base = Object.keys(I18N.pt).sort().join('\n');
   Object.keys(I18N).forEach(function (l) {
     if (Object.keys(I18N[l]).sort().join('\n') !== base) out.keyDiff.push(l);
@@ -59,6 +59,18 @@ setTimeout(function () {
     dimming: !!document.getElementById('cfgBackgroundDim'),
     fallback: !document.body.classList.contains('has-custom-background')
   };
+  out.dock = {
+    quickTiles: document.querySelectorAll('#appsGrid .app-tile:not(.more-tile)').length === 4,
+    moreTile: !!document.getElementById('moreAppsBtn'),
+    preferences: !!document.getElementById('cfgDock4')
+  };
+  document.getElementById('moreAppsBtn').click();
+  var moreOpened = document.getElementById('allAppsDrawer').classList.contains('active');
+  var goBack = document.createEvent('Event');
+  goBack.initEvent('keydown', true, true);
+  Object.defineProperty(goBack, 'keyCode', { value: 461 });
+  document.dispatchEvent(goBack);
+  out.dock.backClosesDrawer = moreOpened && !document.getElementById('allAppsDrawer').classList.contains('active');
   out.menuRows = { maxFavorites: state.favorites.length <= 12, cityHidden: document.getElementById('cfgCity').parentNode.style.display === 'none', ipHidden: document.getElementById('cfgIpLocate').parentNode.style.display === 'none' };
   out.hiddenApps = ['Globoplay', 'SkyShowtime', 'LG Gaming Portal', '8 Ball Pool', 'LG Sports Playbook']
     .filter(function(title) { return !isHiddenApp('test-id', title); });
@@ -101,6 +113,7 @@ def run_language(chrome, lang, workdir):
     with open(page, "w", encoding="utf-8") as f:
         f.write(html)
     shutil.copytree(os.path.join(REPO_DIR, "app", "assets"), os.path.join(workdir, "assets"), dirs_exist_ok=True)
+    shutil.copyfile(os.path.join(REPO_DIR, "app", "custom-dock.js"), os.path.join(workdir, "custom-dock.js"))
     res = subprocess.run(
         [chrome, "--headless=new", "--disable-gpu", "--no-sandbox", "--window-size=1920,1080",
          "--virtual-time-budget=6000", f"--user-data-dir={os.path.join(workdir, 'profile_' + lang)}",
@@ -131,6 +144,8 @@ def main():
                 failures.append(f"{lang}: Back did not close the Customize menu")
             if result["hiddenApps"]:
                 failures.append(f"{lang}: unwanted app filter failed: {result['hiddenApps']}")
+            if not all(result["dock"].values()):
+                failures.append(f"{lang}: dock or More navigation failed: {result['dock']}")
             if not all(result["background"].values()):
                 failures.append(f"{lang}: background fallback/settings failed: {result['background']}")
             if not all(result["menuRows"].values()):

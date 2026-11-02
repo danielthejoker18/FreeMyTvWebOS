@@ -64,6 +64,14 @@ It fast-forwards a **clean** `Custom` checkout, then deploys only a new Git comm
 
 GitHub Actions `CI` also automatically builds and uploads a tested installable IPK for pushes to `Custom`, and can be run manually using **Actions → CI → Run workflow**. This hosted workflow **does not connect to the TV** (the TV remains private on your LAN); use the local deployment script to install it.
 
+## Wallpaper-first dock on Custom
+
+The latest design replaces the previous 12-tile home shelf with a **four-shortcut bottom dock** and a fifth **••• All apps** tile, keeping the background illustration visible across most of the screen. No floating app labels, brand badges or distracting promotional content appear on Home. The compact clock/date and gear remain at top-right.
+
+By default, the dock prefers Netflix, Spotify, Apple TV (after webOS discovers its installed app) and the Nintendo Switch HDMI input (after assigning that input as Switch in Customize). If a preferred app is unavailable, an existing favorite fills the empty slot. From **Customize → Quick-launch dock**, choose all four shortcuts; the settings are saved on the TV. **•••** opens a scrollable remote-friendly menu of the remaining favorites, installed apps, HDMI shortcuts and USB Media Player, and Back returns to the dock.
+
+The existing favorites limit (12), editing/reordering, native app launches, HDMI device assignment, USB shortcut, theme, wallpaper/dimming and OLED idle screensaver are preserved. Your local `background.jpg` remains optional and is not replaced.
+
 ## Custom branch — minimal home
 
 The `Custom` branch displays only the **date, time, a settings gear and a centered dock of app tiles**. Product branding, weather, recommendations, the hero heading and performance badges are hidden. The default dock contains four apps, but existing favorites on the TV are preserved.

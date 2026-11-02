@@ -27,6 +27,7 @@ jobs:
         run: |
           python scripts/check.py --extract-js "$RUNNER_TEMP/app.js"
           npx --yes es-check@7.2.1 es5 "$RUNNER_TEMP/app.js"
+          npx --yes es-check@7.2.1 es5 app/custom-dock.js
       - name: Headless browser test (boots in all 5 languages, no JS errors, translations complete)
         run: python scripts/browser_test.py
       - name: Upload tested Custom IPK
