@@ -928,6 +928,19 @@
             color: rgba(255, 255, 255, 0.4);
             margin-top: 6px;
         }
+    
+        /* Custom LG C5 home screen */
+
+        /* Hide weather in the header */
+        .weather-widget {
+            display: none !important;
+        }
+
+        /* Hide the complete trending section */
+        .picks-section {
+            display: none !important;
+        }
+
     </style>
     <script>
         (function() {
@@ -1698,6 +1711,7 @@
         // engine LG ships on webOS 3.x - either would otherwise throw
         // synchronously and abort the rest of the boot sequence below it.
         function fetchWeather() {
+            return;
             if (typeof fetch !== 'function') {
                 document.getElementById('weatherText').textContent = '22°C • ' + t('Clear');
                 document.getElementById('weatherSub').textContent = state.city || t('Offline Mode');
@@ -1811,6 +1825,7 @@
 
         // --- Live Trending Picks (TMDB + Live TVMaze Zero-Key Feed), split by Movies/Shows tab ---
         function fetchTrendingPicks() {
+            return;
             var badge = document.getElementById('picksSourceBadge');
             var tab = state.picksTab;
             var tmdbMediaPath = tab === 'shows' ? 'tv' : 'movie';
