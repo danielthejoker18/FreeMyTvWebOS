@@ -34,7 +34,7 @@ EXPECTED = {  # language -> (element id, expected text)
 # Runs inside the page after boot and reports into <pre id="__result">.
 PROBE = r"""
 setTimeout(function () {
-  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false };
+  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false, menuRows: {} };
   var base = Object.keys(I18N.pt).sort().join('\n');
   Object.keys(I18N).forEach(function (l) {
     if (Object.keys(I18N[l]).sort().join('\n') !== base) out.keyDiff.push(l);
@@ -53,6 +53,7 @@ setTimeout(function () {
     var isBrand = DEFAULT_CATALOG.some(function (a) { return a.title === v; }) || /^HDMI \d$/.test(v);
     if (!isBrand && !Object.prototype.hasOwnProperty.call(I18N.pt, v)) out.missing.push(v);
   });
+  out.menuRows = { maxFavorites: state.favorites.length <= 12, cityHidden: document.getElementById('cfgCity').parentNode.style.display === 'none', ipHidden: document.getElementById('cfgIpLocate').parentNode.style.display === 'none' };
   out.hiddenApps = ['Globoplay', 'SkyShowtime', 'LG Gaming Portal', '8 Ball Pool', 'LG Sports Playbook']
     .filter(function(title) { return !isHiddenApp('test-id', title); });
   addLaunchPoints([{ appId: 'skyshowtime.test', title: 'SkyShowtime' }, { appId: 'future.streaming', title: 'Future Streaming' }]);
@@ -124,6 +125,8 @@ def main():
                 failures.append(f"{lang}: Back did not close the Customize menu")
             if result["hiddenApps"]:
                 failures.append(f"{lang}: unwanted app filter failed: {result['hiddenApps']}")
+            if not all(result["menuRows"].values()):
+                failures.append(f"{lang}: minimal preferences failed: {result['menuRows']}")
             if result["text"] != expected:
                 failures.append(f"{lang}: expected Customize button '{expected}', got '{result['text']}'")
             if lang == "en":  # dictionary checks are language independent; report once
