@@ -39,7 +39,9 @@ Open source. Zero ads. 100% Onboard. No root required.
 
 The `Custom` branch displays only the **date, time, a settings gear and a centered dock of app tiles**. Product branding, weather, recommendations, the hero heading and performance badges are hidden. The default dock contains four apps, but existing favorites on the TV are preserved.
 
-On your TV, open the **⚙ gear** to add or remove installed apps (up to eight), change the theme/clock and select **Reorder** to rearrange your favorites. New apps, such as Apple TV or Max, appear in the selector when detected by webOS. If they do not, approve the TV's installed-apps permission prompt.
+On your TV, open the **⚙ gear** to add or remove installed apps (up to eight), change the theme/clock and select **Reorder** to rearrange your favorites. The Magic Remote **Back** key closes Customize rather than exiting the launcher. The app selector omits Globoplay, SkyShowtime, LG Gaming Portal, 8 Ball Pool and LG Sports Playbook by default; edit `HIDDEN_APP_TITLES` in `app/index.html` to change this list. New apps, such as Apple TV or Max, appear in the selector when detected by webOS. If they do not, approve the TV's installed-apps permission prompt.
+
+**SSH installation:** The installer remembers TVs that reject forced PTY allocation in `~/.ssh/webos_tv_pty_support.json`. Delete this file if you need to re-detect the TV's terminal capabilities.
 
 **Build before installing:** The committed `dist/` package belongs to the upstream base version, not the edits on this branch. From your clone run `python scripts/build.py` followed by `python scripts/install.py`, or download the built **FreeMyTvWebOS-Custom** IPK from the successful GitHub Actions run on this branch. This is an app launcher; the stock LG Home button is not replaced without a separate rooted-TV integration.
 

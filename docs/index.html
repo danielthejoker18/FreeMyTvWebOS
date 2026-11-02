@@ -1239,6 +1239,23 @@
     </div>
 
     <script>
+        // Apps deliberately excluded from the on-TV favorites selector.
+        // Add exact titles here (lowercase) to keep future unwanted apps hidden.
+        var HIDDEN_APP_TITLES = {
+            'globoplay': true,
+            'skyshowtime': true,
+            'lg gaming portal': true,
+            'gaming portal': true,
+            '8 ball pool': true,
+            'lg sports playbook': true,
+            'sports playbook': true
+        };
+        var HIDDEN_APP_IDS = { 'globoplaywebos': true };
+        function isHiddenApp(appId, appTitle) {
+            var name = String(appTitle || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            return !!(HIDDEN_APP_IDS[appId] || HIDDEN_APP_TITLES[name]);
+        }
+
         // --- Default Catalog of Apps ---
         var DEFAULT_CATALOG = [
             { id: 'youtube.leanback.v4', title: 'YouTube', tag: 'Streaming', desc: 'Watch 4K videos, live streams, music, and coding radio.', color: '#ff0000', badge: 'YT', bg: 'linear-gradient(135deg, #ff0000, #b00000)' },
@@ -1353,7 +1370,7 @@
             ipLocate: localStorage.getItem('fmtv_ip_locate') || 'off',
             lang: localStorage.getItem('fmtv_lang') || 'auto',
             textSize: localStorage.getItem('fmtv_text_size') || 'normal',
-            catalog: DEFAULT_CATALOG.slice(),
+            catalog: DEFAULT_CATALOG.filter(function(app) { return !isHiddenApp(app.id, app.title); }),
             picksTab: 'movies',
             hourlyForecast: [],
             sunrise: '',
@@ -1361,6 +1378,16 @@
             isSunset: false,
             isNight: true
         };
+
+        // Remove an excluded favorite without touching other saved app choices.
+        function removeHiddenFavorite(appId) {
+            var before = state.favorites.length;
+            state.favorites = state.favorites.filter(function(id) { return id !== appId; });
+            if (state.favorites.length !== before) {
+                try { localStorage.setItem('fmtv_favorites', JSON.stringify(state.favorites)); } catch (e) {}
+            }
+        }
+        Object.keys(HIDDEN_APP_IDS).forEach(removeHiddenFavorite);
 
         // --- Localization ---
         // English is the source language: every UI string below is looked up by its
@@ -2027,6 +2054,10 @@
             launchPoints.forEach(function(lp) {
                 var appId = lp.appId || lp.id;
                 if (!appId) return;
+                if (isHiddenApp(appId, lp.title)) {
+                    removeHiddenFavorite(appId);
+                    return;
+                }
                 var exists = arrFind(state.catalog, function(c) { return c.id === appId; });
                 var iconUrl = launchPointIcon(lp);
                 if (exists && iconUrl) exists.iconUrl = iconUrl;
@@ -2722,7 +2753,7 @@
 
             if (shelfEdit) {
                 if (e.keyCode === 461 || e.key === 'Escape' || e.key === 'GoBack') {
-                    finishShelfEdit(false); e.preventDefault(); return;
+                    finishShelfEdit(false); e.preventDefault(); e.stopPropagation(); return;
                 }
                 if (movingTileId) {
                     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -2738,15 +2769,19 @@
                 }
             }
 
-            // Back button on LG Magic Remote (461) or Escape
+            // With disableBackHistoryAPI in appinfo.json, handle the Magic Remote
+            // Back key ourselves. Inside settings it must not exit to LG Home.
             if (e.keyCode === 461 || e.key === 'Escape' || e.key === 'GoBack') {
                 if (modalOpen) {
                     closeSettingsModal();
-                    e.preventDefault();
                 } else if (drawerOpen) {
                     closeDrawer();
-                    e.preventDefault();
+                } else if (window.webOS && typeof webOS.platformBack === 'function') {
+                    // Root screen: preserve the normal webOS exit confirmation.
+                    webOS.platformBack();
                 }
+                e.preventDefault();
+                e.stopPropagation();
                 return;
             }
 

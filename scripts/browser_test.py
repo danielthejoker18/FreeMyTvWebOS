@@ -34,7 +34,7 @@ EXPECTED = {  # language -> (element id, expected text)
 # Runs inside the page after boot and reports into <pre id="__result">.
 PROBE = r"""
 setTimeout(function () {
-  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '' };
+  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false };
   var base = Object.keys(I18N.pt).sort().join('\n');
   Object.keys(I18N).forEach(function (l) {
     if (Object.keys(I18N[l]).sort().join('\n') !== base) out.keyDiff.push(l);
@@ -53,6 +53,18 @@ setTimeout(function () {
     var isBrand = DEFAULT_CATALOG.some(function (a) { return a.title === v; }) || /^HDMI \d$/.test(v);
     if (!isBrand && !Object.prototype.hasOwnProperty.call(I18N.pt, v)) out.missing.push(v);
   });
+  out.hiddenApps = ['Globoplay', 'SkyShowtime', 'LG Gaming Portal', '8 Ball Pool', 'LG Sports Playbook']
+    .filter(function(title) { return !isHiddenApp('test-id', title); });
+  addLaunchPoints([{ appId: 'skyshowtime.test', title: 'SkyShowtime' }, { appId: 'future.streaming', title: 'Future Streaming' }]);
+  if (state.catalog.some(function(item) { return item.id === 'skyshowtime.test'; })) out.hiddenApps.push('SkyShowtime discovery');
+  if (!state.catalog.some(function(item) { return item.id === 'future.streaming'; })) out.hiddenApps.push('Future app discovery');
+  document.getElementById('customizeBtn').click();
+  var wasOpen = document.getElementById('settingsModal').classList.contains('active');
+  var backEvent = document.createEvent('Event');
+  backEvent.initEvent('keydown', true, true);
+  Object.defineProperty(backEvent, 'keyCode', { value: 461 });
+  document.dispatchEvent(backEvent);
+  out.backClosesSettings = wasOpen && !document.getElementById('settingsModal').classList.contains('active');
   out.text = document.getElementById('customizeBtn').textContent.replace(/^\s+|\s+$/g, '');
   var pre = document.createElement('pre');
   pre.id = '__result';
@@ -108,6 +120,10 @@ def main():
                 continue
             if result["errors"]:
                 failures.append(f"{lang}: uncaught JS errors: {result['errors'][:3]}")
+            if not result["backClosesSettings"]:
+                failures.append(f"{lang}: Back did not close the Customize menu")
+            if result["hiddenApps"]:
+                failures.append(f"{lang}: unwanted app filter failed: {result['hiddenApps']}")
             if result["text"] != expected:
                 failures.append(f"{lang}: expected Customize button '{expected}', got '{result['text']}'")
             if lang == "en":  # dictionary checks are language independent; report once

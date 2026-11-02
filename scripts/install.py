@@ -139,22 +139,33 @@ def install_app(tv_ip, passphrase=None):
         print("[!] SCP upload failed.")
         return False
 
-    # luna-send-pub silently prints nothing at all without a controlling TTY
-    # (ssh -tt), and dev/install streams ~15-20 progress replies before the
-    # final "installed" status, so a generous -n bound is needed. It's also
-    # capped with `timeout` because luna-send-pub keeps the SSH session open
-    # waiting for more replies even once the service stops sending any.
-    def run_luna(remote_cmd, force_pty=True):
-        tty_flags = ["-tt"] if force_pty else []
+    # Older TVs may require a PTY for luna-send-pub to produce output; other
+    # TVs (including some C5 units) explicitly reject forced PTY allocation.
+    # Cache the detected capability per TV IP to avoid rejected attempts on
+    # subsequent installs. Delete ~/.ssh/webos_tv_pty_support.json to retest.
+    pty_cache_file = os.path.join(ssh_dir, "webos_tv_pty_support.json")
+    try:
+        with open(pty_cache_file, "r", encoding="utf-8") as f:
+            pty_support = json.load(f)
+        if not isinstance(pty_support, dict):
+            pty_support = {}
+    except (OSError, ValueError):
+        pty_support = {}
+
+    def run_luna(remote_cmd):
+        force_pty = pty_support.get(tv_ip, True)
+        tty_flags = ["-tt"] if force_pty else ["-T"]
         args = ["ssh", *tty_flags, *ssh_opts, "-p", "9922", "-i", dec_key, f"prisoner@{tv_ip}", remote_cmd]
         res = subprocess.run(args, capture_output=True, text=True)
-        # Some TVs' sshd rejects forced PTY allocation outright ("PTY
-        # allocation request failed on channel 0"); ssh then continues the
-        # session without one, which starves luna-send-pub of output. Retry
-        # once without forcing a PTY so the command itself still goes through.
         if force_pty and "PTY allocation request failed" in (res.stderr or ""):
-            print("[*] TV rejected forced PTY allocation; retrying without one...")
-            res = subprocess.run(["ssh", *ssh_opts, "-p", "9922", "-i", dec_key, f"prisoner@{tv_ip}", remote_cmd], capture_output=True, text=True)
+            pty_support[tv_ip] = False
+            try:
+                with open(pty_cache_file, "w", encoding="utf-8") as f:
+                    json.dump(pty_support, f, indent=2)
+            except OSError:
+                pass  # Detection still applies to both commands in this run.
+            print("[*] TV does not support SSH PTY; using non-interactive commands from now on.")
+            res = subprocess.run(["ssh", "-T", *ssh_opts, "-p", "9922", "-i", dec_key, f"prisoner@{tv_ip}", remote_cmd], capture_output=True, text=True)
         return res
 
     def run_luna_timed(seconds, inner_cmd):

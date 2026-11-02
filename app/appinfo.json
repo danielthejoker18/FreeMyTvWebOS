@@ -12,6 +12,7 @@
   "iconColor": "#0a84ff",
   "resolution": "1920x1080",
   "handlesRelaunch": false,
+  "disableBackHistoryAPI": true,
   "supportQuickStart": true,
   "requiredPermissions": [
     "applications",
