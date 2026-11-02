@@ -52,7 +52,7 @@ py scripts/sync_docs.py
 py scripts/deploy_rooted.py --device lg-c5 --launch
 ```
 
-This builds a fresh IPK, installs it via `ares-install`, and optionally opens it. Unlike the old `scripts/install.py`, it works after Developer Mode is removed. It doesn't touch the Home-button mapping, root setup or autostart hooks.
+This builds a fresh IPK in a temporary directory (without changing the tracked `dist/` package), installs it via `ares-install`, and optionally opens it. Unlike the old `scripts/install.py`, it works after Developer Mode is removed. It doesn't touch the Home-button mapping, root setup or autostart hooks.
 
 For a scheduled Windows Task or a manual daily check, run:
 

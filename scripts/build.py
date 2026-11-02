@@ -12,7 +12,9 @@ import subprocess
 
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP_DIR = os.path.join(REPO_DIR, "app")
-DIST_DIR = os.path.join(REPO_DIR, "dist")
+# Allow deployment to build into a temporary directory without modifying
+# the repository's tracked dist/ IPK (important for scheduled git pulls).
+DIST_DIR = os.environ.get("FMTV_DIST_DIR", os.path.join(REPO_DIR, "dist"))
 
 def read_appinfo():
     with open(os.path.join(APP_DIR, "appinfo.json"), "r", encoding="utf-8") as f:

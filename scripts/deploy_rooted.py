@@ -16,10 +16,12 @@ the PC; this script never sends them to GitHub or stores TV credentials.
 """
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,17 +66,22 @@ def main():
         print("[+] Already deployed this commit to " + args.device + "; no update necessary")
         return 0
 
-    run([sys.executable, ROOT / "scripts" / "build.py"])
     info = json.loads((ROOT / "app" / "appinfo.json").read_text(encoding="utf-8"))
-    ipk = ROOT / "dist" / (info["id"] + "_" + info["version"] + "_all.ipk")
-    if not ipk.is_file():
-        raise RuntimeError("Build did not produce " + str(ipk))
+    with tempfile.TemporaryDirectory(prefix="freemytv-deploy-") as staging:
+        # A temporary build avoids changing tracked dist/ and breaking --pull.
+        env = os.environ.copy()
+        env["FMTV_DIST_DIR"] = staging
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "build.py")],
+                       cwd=str(ROOT), env=env, check=True)
+        ipk = Path(staging) / (info["id"] + "_" + info["version"] + "_all.ipk")
+        if not ipk.is_file():
+            raise RuntimeError("Build did not produce " + str(ipk))
 
-    run(["ares-install", "--device", args.device, ipk])
-    if args.launch:
-        if not shutil.which("ares-launch"):
-            raise RuntimeError("ares-launch not found")
-        run(["ares-launch", "--device", args.device, info["id"]])
+        run(["ares-install", "--device", args.device, ipk])
+        if args.launch:
+            if not shutil.which("ares-launch"):
+                raise RuntimeError("ares-launch not found")
+            run(["ares-launch", "--device", args.device, info["id"]])
     stamp.write_text(sha + "\n", encoding="utf-8")
     print("[+] Deployed " + info["id"] + " to " + args.device)
     return 0
