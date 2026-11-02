@@ -34,7 +34,7 @@ EXPECTED = {  # language -> (element id, expected text)
 # Runs inside the page after boot and reports into <pre id="__result">.
 PROBE = r"""
 setTimeout(function () {
-  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false, menuRows: {} };
+  var out = { errors: window.__errors || [], missing: [], keyDiff: [], text: '', hiddenApps: [], backClosesSettings: false, menuRows: {}, background: {} };
   var base = Object.keys(I18N.pt).sort().join('\n');
   Object.keys(I18N).forEach(function (l) {
     if (Object.keys(I18N[l]).sort().join('\n') !== base) out.keyDiff.push(l);
@@ -53,6 +53,12 @@ setTimeout(function () {
     var isBrand = DEFAULT_CATALOG.some(function (a) { return a.title === v; }) || /^HDMI \d$/.test(v);
     if (!isBrand && !Object.prototype.hasOwnProperty.call(I18N.pt, v)) out.missing.push(v);
   });
+  out.background = {
+    toggle: !!document.getElementById('cfgBackgroundEnabled'),
+    picker: !!document.getElementById('cfgBackgroundFile'),
+    dimming: !!document.getElementById('cfgBackgroundDim'),
+    fallback: !document.body.classList.contains('has-custom-background')
+  };
   out.menuRows = { maxFavorites: state.favorites.length <= 12, cityHidden: document.getElementById('cfgCity').parentNode.style.display === 'none', ipHidden: document.getElementById('cfgIpLocate').parentNode.style.display === 'none' };
   out.hiddenApps = ['Globoplay', 'SkyShowtime', 'LG Gaming Portal', '8 Ball Pool', 'LG Sports Playbook']
     .filter(function(title) { return !isHiddenApp('test-id', title); });
@@ -125,6 +131,8 @@ def main():
                 failures.append(f"{lang}: Back did not close the Customize menu")
             if result["hiddenApps"]:
                 failures.append(f"{lang}: unwanted app filter failed: {result['hiddenApps']}")
+            if not all(result["background"].values()):
+                failures.append(f"{lang}: background fallback/settings failed: {result['background']}")
             if not all(result["menuRows"].values()):
                 failures.append(f"{lang}: minimal preferences failed: {result['menuRows']}")
             if result["text"] != expected:

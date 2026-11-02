@@ -63,6 +63,29 @@
             transition: background 1.2s ease;
         }
 
+        /* Optional local artwork. The gradient stays as the fallback until a
+           bundled image is actually loaded. No network connection is needed. */
+        body.has-custom-background::before,
+        body.has-custom-background::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body.has-custom-background::before {
+            background-image: var(--custom-background-url);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        body.has-custom-background::after {
+            background: rgba(0, 0, 0, var(--custom-background-dim, 0.45));
+        }
+
         /* High Performance Mode (Low GPU overhead for TVs like 55NANO81 / webOS 24) */
         :root.perf-mode .ambient-glow,
         body.perf-mode .ambient-glow {
@@ -1152,6 +1175,27 @@
                 </div>
                 <div class="settings-row" style="margin-top: 14px;">
                     <div class="field-group">
+                        <label>Background Image</label>
+                        <select class="field-input modal-nav" id="cfgBackgroundEnabled">
+                            <option value="on">On</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Background File</label>
+                        <select class="field-input modal-nav" id="cfgBackgroundFile">
+                            <option value="background.jpg">background.jpg</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Background Dimming</label>
+                        <select class="field-input modal-nav" id="cfgBackgroundDim">
+                            <option value="light">Light</option>
+                            <option value="medium">Medium</option>
+                            <option value="strong">Strong</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
                         <label>Performance Mode</label>
                         <select class="field-input modal-nav" id="cfgPerfMode">
                             <option value="standard">Standard (Glass & Glow)</option>
@@ -1387,6 +1431,9 @@
             ipLocate: localStorage.getItem('fmtv_ip_locate') || 'off',
             lang: localStorage.getItem('fmtv_lang') || 'auto',
             textSize: localStorage.getItem('fmtv_text_size') || 'normal',
+            backgroundEnabled: localStorage.getItem('fmtv_background_enabled') !== 'off',
+            backgroundFile: localStorage.getItem('fmtv_background_file') || 'background.jpg',
+            backgroundDim: localStorage.getItem('fmtv_background_dim') || 'medium',
             catalog: DEFAULT_CATALOG.filter(function(app) { return !isHiddenApp(app.id, app.title); }),
             picksTab: 'movies',
             hourlyForecast: [],
@@ -1669,6 +1716,84 @@
             }
         };
         // Names shown in the Language setting (never translated, so they stay findable).
+        // Background customization strings. Keep every locale's keys identical.
+        var BACKGROUND_TRANSLATIONS = [
+            ['Background Image', 'Imagem de Fundo', 'Imagen de Fondo', 'Hintergrundbild', 'Image de Fond'],
+            ['Background File', 'Ficheiro de Fundo', 'Archivo de Fondo', 'Hintergrunddatei', 'Fichier de Fond'],
+            ['Background Dimming', 'Escurecer Fundo', 'Oscurecer Fondo', 'Hintergrund abdunkeln', 'Assombrir le Fond'],
+            ['Off', 'Desligado', 'Apagado', 'Aus', 'Désactivé'],
+            ['Light', 'Ligeiro', 'Ligero', 'Leicht', 'Léger'],
+            ['Medium', 'Médio', 'Medio', 'Mittel', 'Moyen'],
+            ['Strong', 'Forte', 'Fuerte', 'Stark', 'Fort']
+        ];
+        BACKGROUND_TRANSLATIONS.forEach(function(entry) {
+            ['pt', 'es', 'de', 'fr'].forEach(function(lang, index) {
+                I18N[lang][entry[0]] = entry[index + 1];
+            });
+        });
+
+        // --- Local background assets ---
+        // Only bundled assets are selectable: never accept arbitrary URLs or paths.
+        var BACKGROUND_FILES = ['background.jpg', 'background-2.jpg', 'background-3.jpg'];
+        var backgroundLoadGeneration = 0;
+
+        function backgroundFileAllowed(file) {
+            return BACKGROUND_FILES.indexOf(file) !== -1;
+        }
+
+        function applyCustomBackground() {
+            var generation = ++backgroundLoadGeneration;
+            document.body.classList.remove('has-custom-background');
+            document.body.style.removeProperty('--custom-background-url');
+            var dims = { light: '0.20', medium: '0.45', strong: '0.68' };
+            var dim = Object.prototype.hasOwnProperty.call(dims, state.backgroundDim)
+                ? dims[state.backgroundDim] : dims.medium;
+            document.body.style.setProperty('--custom-background-dim', dim);
+            if (!state.backgroundEnabled || !backgroundFileAllowed(state.backgroundFile)) return;
+
+            // Image.onload is the feature test: if the image wasn't installed,
+            // the theme gradient remains visible with no broken-image placeholder.
+            var image = new Image();
+            image.onload = function() {
+                if (generation !== backgroundLoadGeneration) return;
+                document.body.style.setProperty('--custom-background-url',
+                    'url("assets/' + state.backgroundFile + '")');
+                document.body.classList.add('has-custom-background');
+            };
+            image.onerror = function() {
+                if (generation !== backgroundLoadGeneration) return;
+                document.body.classList.remove('has-custom-background');
+            };
+            image.src = 'assets/' + state.backgroundFile;
+        }
+
+        function findAvailableBackgrounds() {
+            var picker = document.getElementById('cfgBackgroundFile');
+            var preferred = state.backgroundFile;
+            picker.innerHTML = '';
+            picker.disabled = true;
+            var count = 0;
+
+            BACKGROUND_FILES.forEach(function(file) {
+                var image = new Image();
+                image.onload = function() {
+                    var option = document.createElement('option');
+                    option.value = file;
+                    option.textContent = file;
+                    picker.appendChild(option);
+                    count += 1;
+                    picker.disabled = false;
+                    if (file === preferred || count === 1) picker.value = file;
+                    // Keep the stored selection if it loads after another option.
+                    if (count > 1 && toArray(picker.options).some(function(opt) {
+                        return opt.value === preferred;
+                    })) picker.value = preferred;
+                };
+                image.onerror = function() {};
+                image.src = 'assets/' + file;
+            });
+        }
+
         var LANG_LOCALES = { en: 'en-US', pt: 'pt-BR', es: 'es-ES', de: 'de-DE', fr: 'fr-FR' };
 
         function currentLang() {
@@ -2526,6 +2651,9 @@
             document.getElementById('cfgLang').value = state.lang;
             document.getElementById('cfgTextSize').value = state.textSize;
             document.getElementById('cfgTmdbKey').value = state.tmdbKey;
+            document.getElementById('cfgBackgroundEnabled').value = state.backgroundEnabled ? 'on' : 'off';
+            document.getElementById('cfgBackgroundDim').value = state.backgroundDim;
+            findAvailableBackgrounds();
 
             renderAppSelectorGrid();
             settingsModal.classList.add('active');
@@ -2799,6 +2927,9 @@
             document.getElementById('cfgLang').value = 'auto';
             document.getElementById('cfgTextSize').value = 'normal';
             document.getElementById('cfgTmdbKey').value = '';
+            document.getElementById('cfgBackgroundEnabled').value = 'on';
+            document.getElementById('cfgBackgroundDim').value = 'medium';
+            document.getElementById('cfgBackgroundFile').value = 'background.jpg';
             renderAppSelectorGrid();
             refreshModalNavList();
             showToast(t('Defaults restored'));
@@ -2816,7 +2947,14 @@
             state.lang = document.getElementById('cfgLang').value;
             state.textSize = document.getElementById('cfgTextSize').value;
             state.tmdbKey = document.getElementById('cfgTmdbKey').value.trim();
+            state.backgroundEnabled = document.getElementById('cfgBackgroundEnabled').value === 'on';
+            var chosenBackground = document.getElementById('cfgBackgroundFile').value;
+            if (backgroundFileAllowed(chosenBackground)) state.backgroundFile = chosenBackground;
+            state.backgroundDim = document.getElementById('cfgBackgroundDim').value;
 
+            localStorage.setItem('fmtv_background_enabled', state.backgroundEnabled ? 'on' : 'off');
+            localStorage.setItem('fmtv_background_file', state.backgroundFile);
+            localStorage.setItem('fmtv_background_dim', state.backgroundDim);
             localStorage.setItem('fmtv_favorites', JSON.stringify(state.favorites));
             localStorage.setItem('fmtv_city', state.city);
             localStorage.setItem('fmtv_theme', state.theme);
@@ -2832,6 +2970,7 @@
             applyTextSize();
             renderAppsShelf();
             applyTheme();
+            applyCustomBackground();
             updateClock();
             closeSettingsModal();
             showToast(t('Saved & Applied!'));
@@ -2933,6 +3072,7 @@
         applyTextSize();
         renderAppsShelf();
         applyTheme();
+        applyCustomBackground();
         // The minimal launcher deliberately makes no weather, location, or
         // trending content requests. A static theme works entirely offline.
         discoverTVApps();

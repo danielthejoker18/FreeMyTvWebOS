@@ -20,6 +20,12 @@ DOCS = os.path.join(REPO_DIR, "docs")
 def mirrored_files():
     """Yield (src, dst) pairs that docs/ must mirror from app/."""
     yield os.path.join(APP, "index.html"), os.path.join(DOCS, "index.html")
+    # User-supplied artwork is optional; when present it must be mirrored into
+    # docs/ so the GitHub Pages preview can display exactly the packaged image.
+    for name in ("background.jpg", "background-2.jpg", "background-3.jpg"):
+        src = os.path.join(APP, "assets", name)
+        if os.path.isfile(src):
+            yield src, os.path.join(DOCS, "assets", name)
     brands = os.path.join(APP, "assets", "brands")
     for name in sorted(os.listdir(brands)):
         yield os.path.join(brands, name), os.path.join(DOCS, "assets", "brands", name)

@@ -35,6 +35,35 @@ Open source. Zero ads. 100% Onboard. No root required.
 
 ---
 
+### Custom background (Custom branch)
+
+Put your image in `app/assets/background.jpg` (recommended 1920x1080 or 3840x2160, optimized to roughly 1–2 MB). In **⚙ Customize → Preferences & Display**, choose **Background Image: On/Off**, **Background File**, and **Background Dimming: Light/Medium/Strong**. The background is local and works offline. The launcher automatically keeps the normal gradient if the chosen file is missing. You can also add `background-2.jpg` and `background-3.jpg` later; available files appear in the selector automatically.
+
+Run `py scripts/sync_docs.py` after adding or replacing an image, so the GitHub Pages preview gets the same asset. Keep `app/assets/background*.jpg` and `docs/assets/background*.jpg` together in commits. No wallpaper image is included by default; add your own.
+
+### Build and deployment to a rooted TV (Custom branch)
+
+For one-time setup on Windows, install the [webOS CLI](https://webostv.developer.lge.com/develop/tools/webos-tv-cli-dev-guide) using `npm install -g @webos-tools/cli` and register the rooted TV with `ares-setup-device` (host = TV LAN IP, user = `root`, port = `22`, local SSH private key). Confirm with `ares-setup-device --list`.
+
+From your clone:
+
+```powershell
+py scripts/sync_docs.py
+py scripts/deploy_rooted.py --device lg-c5 --launch
+```
+
+This builds a fresh IPK, installs it via `ares-install`, and optionally opens it. Unlike the old `scripts/install.py`, it works after Developer Mode is removed. It doesn't touch the Home-button mapping, root setup or autostart hooks.
+
+For a scheduled Windows Task or a manual daily check, run:
+
+```powershell
+py scripts/deploy_rooted.py --device lg-c5 --pull --only-if-changed
+```
+
+It fast-forwards a **clean** `Custom` checkout, then deploys only a new Git commit. The PC must be powered on and able to reach the TV over LAN. Schedule it only when you are happy with automatic software updates; keeping `--launch` off avoids interrupting whoever is watching TV. The job never exposes your SSH key to GitHub.
+
+GitHub Actions `CI` also automatically builds and uploads a tested installable IPK for pushes to `Custom`, and can be run manually using **Actions → CI → Run workflow**. This hosted workflow **does not connect to the TV** (the TV remains private on your LAN); use the local deployment script to install it.
+
 ## Custom branch — minimal home
 
 The `Custom` branch displays only the **date, time, a settings gear and a centered dock of app tiles**. Product branding, weather, recommendations, the hero heading and performance badges are hidden. The default dock contains four apps, but existing favorites on the TV are preserved.
@@ -45,7 +74,7 @@ The initial favorites also include **HDMI 1** and **USB / Media**. HDMI 2–4 ar
 
 **SSH installation:** The installer remembers TVs that reject forced PTY allocation in `~/.ssh/webos_tv_pty_support.json`. Delete this file if you need to re-detect the TV's terminal capabilities.
 
-**Build before installing:** The committed `dist/` package belongs to the upstream base version, not the edits on this branch. From your clone run `python scripts/build.py` followed by `python scripts/install.py`, or download the built **FreeMyTvWebOS-Custom** IPK from the successful GitHub Actions run on this branch. This is an app launcher; the stock LG Home button is not replaced without a separate rooted-TV integration.
+**Build before installing:** The committed `dist/` package belongs to the upstream base version, not the edits on this branch. From your clone run `python scripts/deploy_rooted.py --device lg-c5` after setting up ares CLI, or download the built **FreeMyTvWebOS-Custom** IPK from the successful GitHub Actions run on this branch. This is an app launcher; the stock LG Home button is not replaced without a separate rooted-TV integration.
 
 ---
 
