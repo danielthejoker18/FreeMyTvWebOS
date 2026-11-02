@@ -64,6 +64,8 @@ It fast-forwards a **clean** `Custom` checkout, then deploys only a new Git comm
 
 GitHub Actions `CI` also automatically builds and uploads a tested installable IPK for pushes to `Custom`, and can be run manually using **Actions → CI → Run workflow**. This hosted workflow **does not connect to the TV** (the TV remains private on your LAN); use the local deployment script to install it.
 
+**Magic Remote settings navigation:** Use arrows to move between controls. Press **OK** on any dropdown to enter editing (blue highlight), arrows to change its value, then **OK** or **Back** to finish. Back when not editing closes Customize. Background File stays focusable even with only one installed image, and its available-image scan does not disrupt focus.
+
 ## Wallpaper-first dock on Custom
 
 The latest design replaces the previous 12-tile home shelf with a **four-shortcut bottom dock** and a fifth **••• All apps** tile, keeping the background illustration visible across most of the screen. No floating app labels, brand badges or distracting promotional content appear on Home. The compact clock/date and gear remain at top-right.

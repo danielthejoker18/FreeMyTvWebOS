@@ -759,8 +759,14 @@
 
         .field-input:focus,
         .field-input.focused {
-            border-color: var(--accent);
+            border-color: #ffffff;
             background: rgba(0, 0, 0, 0.55);
+            box-shadow: 0 0 0 2px rgba(255,255,255,.22);
+        }
+        .field-input.select-editing {
+            border-color: #79ceff;
+            background: rgba(29,73,108,.55);
+            box-shadow: 0 0 0 2px rgba(121,206,255,.52);
         }
 
         .modal-actions {
@@ -1158,7 +1164,7 @@
         <div class="modal-box">
             <div class="modal-header">
                 <div class="modal-title">Favorite Apps</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Press BACK or ESC to close</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Arrows: move • OK: edit • Back: done / close</div>
             </div>
 
             <div>
@@ -1801,29 +1807,47 @@
             image.src = 'assets/' + state.backgroundFile;
         }
 
+        var backgroundPickerScan = 0;
         function findAvailableBackgrounds() {
             var picker = document.getElementById('cfgBackgroundFile');
             var preferred = state.backgroundFile;
-            picker.innerHTML = '';
-            picker.disabled = true;
-            var count = 0;
+            var request = ++backgroundPickerScan;
+            var available = {};
+            var pending = BACKGROUND_FILES.length;
 
-            BACKGROUND_FILES.forEach(function(file) {
-                var image = new Image();
-                image.onload = function() {
+            // The selector must remain enabled while images load. Otherwise it
+            // is omitted when the D-pad's focusable controls are enumerated.
+            picker.innerHTML = '';
+            picker.disabled = false;
+            var placeholder = document.createElement('option');
+            placeholder.value = preferred;
+            placeholder.textContent = preferred;
+            picker.appendChild(placeholder);
+            picker.value = preferred;
+
+            function onFinished() {
+                pending--;
+                if (pending !== 0 || request !== backgroundPickerScan) return;
+                var selected = picker.value || preferred;
+                picker.innerHTML = '';
+                BACKGROUND_FILES.forEach(function(file) {
+                    if (!available[file]) return;
                     var option = document.createElement('option');
                     option.value = file;
                     option.textContent = file;
                     picker.appendChild(option);
-                    count += 1;
-                    picker.disabled = false;
-                    if (file === preferred || count === 1) picker.value = file;
-                    // Keep the stored selection if it loads after another option.
-                    if (count > 1 && toArray(picker.options).some(function(opt) {
-                        return opt.value === preferred;
-                    })) picker.value = preferred;
-                };
-                image.onerror = function() {};
+                });
+                if (!picker.options.length) {
+                    placeholder.textContent = preferred + ' (not installed)';
+                    picker.appendChild(placeholder);
+                }
+                picker.value = selected;
+                if (picker.selectedIndex < 0) picker.selectedIndex = 0;
+            }
+            BACKGROUND_FILES.forEach(function(file) {
+                var image = new Image();
+                image.onload = function() { available[file] = true; onFinished(); };
+                image.onerror = onFinished;
                 image.src = 'assets/' + file;
             });
         }
@@ -2671,6 +2695,27 @@
         var tempFavorites = [];
         var tempDevices = {};
 
+        var editingModalSelect = null;
+        function endModalSelectEditing() {
+            if (editingModalSelect) editingModalSelect.classList.remove('select-editing');
+            editingModalSelect = null;
+        }
+        function changeModalSelectValue(el, key) {
+            var count = el.options.length;
+            if (!count) return;
+            var step = (key === 'ArrowRight' || key === 'ArrowDown') ? 1 : -1;
+            var idx = el.selectedIndex >= 0 ? el.selectedIndex : 0;
+            for (var n = 0; n < count; n++) {
+                idx = (idx + step + count) % count;
+                if (el.options[idx].disabled) continue;
+                el.selectedIndex = idx;
+                var event = document.createEvent('Event');
+                event.initEvent('change', true, true);
+                el.dispatchEvent(event);
+                break;
+            }
+        }
+
         function openSettingsModal() {
             if (shelfEdit) return;
             modalOpen = true;
@@ -2717,6 +2762,7 @@
         }
 
         function closeSettingsModal() {
+            endModalSelectEditing();
             modalOpen = false;
             settingsModal.classList.remove('active');
             setMainFocus(mainNavItems[curIndex]);
@@ -2767,6 +2813,7 @@
 
         function setModalFocus(el) {
             if (!el) return;
+            if (editingModalSelect && editingModalSelect !== el) endModalSelectEditing();
             modalNavItems.forEach(function(i) { i.classList.remove('focused'); });
             el.classList.add('focused');
             el.focus();
@@ -2791,46 +2838,47 @@
         function moveModalFocus(direction) {
             var active = modalNavItems[modalIndex];
             if (!active) return;
-
-            // App selector is four-column: Up/Down moves to the tile above or
-            // below, rather than the previous/next tile on the same row.
             var grid = document.getElementById('appSelectorGrid');
             if (grid.contains(active)) {
                 var buttons = toArray(grid.querySelectorAll('.modal-nav'));
                 var idx = buttons.indexOf(active);
-                var delta = direction === 'down' ? 4 : direction === 'up' ? -4 :
+                var step = direction === 'down' ? 4 : direction === 'up' ? -4 :
                     direction === 'right' ? 1 : -1;
-                var next = idx + delta;
-                if (next >= 0 && next < buttons.length) {
-                    // Do not wrap across rows when moving horizontally.
-                    if ((direction !== 'right' && direction !== 'left') ||
-                        Math.floor(idx / 4) === Math.floor(next / 4)) {
-                        setModalFocus(buttons[next]);
-                        return;
-                    }
+                var next = idx + step;
+                if (next >= 0 && next < buttons.length &&
+                    ((direction !== 'right' && direction !== 'left') ||
+                     Math.floor(next / 4) === Math.floor(idx / 4))) {
+                    setModalFocus(buttons[next]);
+                    return;
                 }
             }
 
-            // For other form controls / section transitions, choose the
-            // closest item in the direction requested using their geometry.
-            var box = active.getBoundingClientRect();
-            var x = (box.left + box.right) / 2;
-            var y = (box.top + box.bottom) / 2;
+            // First select the closest *row* along the requested axis, then
+            // choose the control aligned with the current column. This avoids
+            // jumping over Background File and Background Dimming.
+            var r = active.getBoundingClientRect();
+            var x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
             var vertical = direction === 'up' || direction === 'down';
-            var sign = (direction === 'down' || direction === 'right') ? 1 : -1;
-            var best = null, score = Infinity;
-            modalNavItems.forEach(function(item) {
-                if (item === active) return;
-                var b = item.getBoundingClientRect();
+            var sign = direction === 'right' || direction === 'down' ? 1 : -1;
+            var options = [];
+            modalNavItems.forEach(function(el) {
+                if (el === active) return;
+                var b = el.getBoundingClientRect();
+                if (!b.width || !b.height) return;
                 var dx = (b.left + b.right) / 2 - x;
                 var dy = (b.top + b.bottom) / 2 - y;
-                var primary = (vertical ? dy : dx) * sign;
-                var secondary = Math.abs(vertical ? dx : dy);
-                if (primary < 12) return;
-                var candidate = primary + secondary * 1.6;
-                if (candidate < score) { score = candidate; best = item; }
+                var forward = (vertical ? dy : dx) * sign;
+                if (forward <= 12) return;
+                options.push({ element: el, forward: forward,
+                    perpendicular: Math.abs(vertical ? dx : dy) });
             });
-            if (best) setModalFocus(best);
+            if (!options.length) return;
+            var distance = Math.min.apply(null, options.map(function(opt) { return opt.forward; }));
+            var row = options.filter(function(opt) { return opt.forward <= distance + 24; });
+            row.sort(function(a, b) {
+                return a.perpendicular - b.perpendicular || a.forward - b.forward;
+            });
+            setModalFocus(row[0].element);
         }
 
         document.getElementById('customizeBtn').addEventListener('click', openSettingsModal);
@@ -3040,7 +3088,9 @@
             // With disableBackHistoryAPI in appinfo.json, handle the Magic Remote
             // Back key ourselves. Inside settings it must not exit to LG Home.
             if (e.keyCode === 461 || e.key === 'Escape' || e.key === 'GoBack') {
-                if (modalOpen) {
+                if (editingModalSelect) {
+                    endModalSelectEditing();
+                } else if (modalOpen) {
                     closeSettingsModal();
                 } else if (drawerOpen) {
                     closeDrawer();
@@ -3062,16 +3112,21 @@
             }
 
             if (modalOpen) {
+                var active = modalNavItems[modalIndex];
                 if (e.key === 'ArrowRight' || e.key === 'ArrowDown' ||
                     e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                    moveModalFocus(e.key.slice(5).toLowerCase());
+                    if (editingModalSelect) changeModalSelectValue(editingModalSelect, e.key);
+                    else moveModalFocus(e.key.slice(5).toLowerCase());
                     e.preventDefault();
                 } else if (e.key === 'Enter') {
-                    var active = modalNavItems[modalIndex];
-                    if (active && active.tagName !== 'INPUT' && active.tagName !== 'SELECT') {
+                    if (editingModalSelect) endModalSelectEditing();
+                    else if (active && active.tagName === 'SELECT') {
+                        editingModalSelect = active;
+                        active.classList.add('select-editing');
+                    } else if (active && active.tagName !== 'INPUT') {
                         active.click();
-                        e.preventDefault();
                     }
+                    e.preventDefault();
                 }
                 return;
             }
