@@ -35,6 +35,16 @@ Open source. Zero ads. 100% Onboard. No root required.
 
 ---
 
+## Custom branch — minimal home
+
+The `Custom` branch displays only the **date, time, a settings gear and a centered dock of app tiles**. Product branding, weather, recommendations, the hero heading and performance badges are hidden. The default dock contains four apps, but existing favorites on the TV are preserved.
+
+On your TV, open the **⚙ gear** to add or remove installed apps (up to eight), change the theme/clock and select **Reorder** to rearrange your favorites. New apps, such as Apple TV or Max, appear in the selector when detected by webOS. If they do not, approve the TV's installed-apps permission prompt.
+
+**Build before installing:** The committed `dist/` package belongs to the upstream base version, not the edits on this branch. From your clone run `python scripts/build.py` followed by `python scripts/install.py`, or download the built **FreeMyTvWebOS-Custom** IPK from the successful GitHub Actions run on this branch. This is an app launcher; the stock LG Home button is not replaced without a separate rooted-TV integration.
+
+---
+
 ## ⚡ Why This Exists
 
 Modern LG webOS (especially webOS 6, 22, 23, and 24) replaced the classic, snappy bottom card bar with a sluggish full-screen portal packed with:

@@ -24,11 +24,11 @@ REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(REPO_DIR, "app", "index.html")
 
 EXPECTED = {  # language -> (element id, expected text)
-    "en": ("customizeBtn", "Customize"),
-    "pt": ("customizeBtn", "Personalizar"),
-    "es": ("customizeBtn", "Personalizar"),
-    "de": ("customizeBtn", "Anpassen"),
-    "fr": ("customizeBtn", "Personnaliser"),
+    "en": ("customizeBtn", "⚙"),
+    "pt": ("customizeBtn", "⚙"),
+    "es": ("customizeBtn", "⚙"),
+    "de": ("customizeBtn", "⚙"),
+    "fr": ("customizeBtn", "⚙"),
 }
 
 # Runs inside the page after boot and reports into <pre id="__result">.
@@ -53,7 +53,7 @@ setTimeout(function () {
     var isBrand = DEFAULT_CATALOG.some(function (a) { return a.title === v; }) || /^HDMI \d$/.test(v);
     if (!isBrand && !Object.prototype.hasOwnProperty.call(I18N.pt, v)) out.missing.push(v);
   });
-  out.text = document.getElementById('customizeBtn').textContent.replace(/^\s+|\s+$/g, '').replace('⚙️ ', '');
+  out.text = document.getElementById('customizeBtn').textContent.replace(/^\s+|\s+$/g, '');
   var pre = document.createElement('pre');
   pre.id = '__result';
   pre.textContent = JSON.stringify(out);

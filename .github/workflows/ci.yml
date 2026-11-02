@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, Custom]
   pull_request:
 
 jobs:
@@ -19,6 +19,13 @@ jobs:
         run: |
           python scripts/build.py
           python scripts/check.py
+      - name: Upload installable Custom IPK
+        if: github.ref == 'refs/heads/Custom'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeMyTvWebOS-Custom
+          path: dist/org.webos.freemytv_*.ipk
+          if-no-files-found: error
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
