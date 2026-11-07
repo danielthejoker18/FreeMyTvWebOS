@@ -1230,6 +1230,37 @@
     </div>
 
     <script>
+        // fetch() needs Chromium 42+; webOS 3.x ships Chromium 38. Minimal XMLHttpRequest-based
+        // replacement (GET/POST, headers, text(), json()) so weather and trending titles work there.
+        if (typeof window.fetch !== 'function' && typeof Promise === 'function') {
+            window.fetch = function(url, options) {
+                return new Promise(function(resolve, reject) {
+                    var xhr = new XMLHttpRequest();
+                    var headers = (options && options.headers) || {};
+                    xhr.open((options && options.method) || 'GET', url, true);
+                    xhr.timeout = 20000;
+                    for (var name in headers) {
+                        if (Object.prototype.hasOwnProperty.call(headers, name)) xhr.setRequestHeader(name, headers[name]);
+                    }
+                    xhr.onload = function() {
+                        var body = xhr.responseText;
+                        resolve({
+                            ok: xhr.status >= 200 && xhr.status < 300,
+                            status: xhr.status,
+                            text: function() { return Promise.resolve(body); },
+                            json: function() {
+                                return new Promise(function(done, fail) {
+                                    try { done(JSON.parse(body)); } catch (e) { fail(e); }
+                                });
+                            }
+                        });
+                    };
+                    xhr.onerror = xhr.ontimeout = function() { reject(new TypeError('Network request failed')); };
+                    xhr.send((options && options.body) || null);
+                });
+            };
+        }
+
         // --- Default Catalog of Apps ---
         var DEFAULT_CATALOG = [
             { id: 'youtube.leanback.v4', title: 'YouTube', tag: 'Streaming', desc: 'Watch 4K videos, live streams, music, and coding radio.', color: '#ff0000', badge: 'YT', bg: 'linear-gradient(135deg, #ff0000, #b00000)' },
