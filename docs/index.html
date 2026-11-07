@@ -915,7 +915,11 @@
         /* OLED-Safe Idle Screensaver */
         .screensaver {
             position: fixed;
-            inset: 0;
+            /* `inset` needs Chromium 87+; without it the overlay shrank to the bottom-left corner on webOS 3.x */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: #000000;
             z-index: 3000;
             display: none;
